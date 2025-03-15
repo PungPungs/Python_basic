@@ -1,6 +1,6 @@
 from motorui import Ui_MainWindow
 from serialmodule import SerialController, SerialManager
-from threadmodule import ThreadManager
+from threadmodule import ThreadManager, ThreadController
 from serial.tools import list_ports
 from threading import Thread
 # from customserial import SerialFactory
@@ -8,11 +8,12 @@ from PySide6.QtWidgets import QMainWindow, QApplication
 import sys
 
 class Main(Ui_MainWindow, QMainWindow):
-    def __init__(self, serial_controller : SerialController):
+    def __init__(self, serial_controller : SerialController, thread_controller : ThreadController):
         super().__init__()
         self.setupUi(self)
         self.serial_controller = serial_controller
-        self.thread_manager = ThreadManager()
+        self.thread_controller = thread_controller
+
         # 가변 변수들..
         self.config = {
             "models" : ["sss", "mag", "ss"],
@@ -26,8 +27,13 @@ class Main(Ui_MainWindow, QMainWindow):
         self.pb_sss.clicked.connect(lambda _ : self.open_and_close(model="sss"))
         self.pb_mag.clicked.connect(lambda _ : self.open_and_close(model="mag"))
         self.pb_ss.clicked.connect(lambda _ : self.open_and_close(model="ss"))
+        self.pb_sss_start.clicked.connect(self.run_thread)
+
         
         self.show()
+    
+    def run_thread(self):
+        self.thread_controller.connection("sss",self.serial_controller.only_read)
 
 
     def open_and_close(self, model):
@@ -63,6 +69,8 @@ class Main(Ui_MainWindow, QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     serial_manager = SerialManager()
+    thread_manager = ThreadManager()
     serial_controller = SerialController(serial_manager)
-    main = Main(serial_controller)
+    thread_controller = ThreadController(thread_manager)
+    main = Main(serial_controller, thread_controller)
     sys.exit(app.exec())

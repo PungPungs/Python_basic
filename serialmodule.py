@@ -25,10 +25,30 @@ class SerialManager:
 
     def is_connected(self, model) -> bool:
         return model in self.serial_connections
+    
+    def __getitem__(self,model):
+        return self.serial_connections.get(model)
 
 class SerialController():
     def __init__(self ,serial_manager : SerialManager):
         self.serial_manager = serial_manager
 
-    def connection(self, model : str, port : str):
+        self.ser_msg = {
+            'B' : '모터 시작',
+            'S' : '모터 정지',
+            'E' : '모터 이동 완료',
+            'U' : 'U',
+            'D' : 'D'
+        }
+    def connection(self, model : str, port : str) -> bool:
         return False if self.serial_manager.is_connected(model) else self.serial_manager.get_serial(model,port)
+    
+    def only_read(self, model):
+        while(self.serial_manager.is_connected(model)):
+            serial = self.serial_manager.__getitem__(model)
+            key = serial.read()
+            msg = self.ser_msg[key]
+            if getattr(int,"msg"):
+                print(msg+"int \n")
+            else:
+                print(msg+"else \n")
