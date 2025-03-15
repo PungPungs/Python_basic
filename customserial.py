@@ -14,15 +14,7 @@ class SerialInterface(ABC):
         pass
 
     @abstractmethod
-    def start(self):
-        pass
-
-    @abstractmethod
-    def stop(self):
-        pass
-
-    @abstractmethod
-    def _make_msg(self):
+    def send(self):
         pass
 
 class SerialFactory(SerialContructure):
@@ -31,19 +23,11 @@ class SerialFactory(SerialContructure):
         return SerialModule(port, baudrate)
 
 class SerialModule(SerialInterface):
-    def __init__(self, port, baudrate):
-        self.model = Serial(port, baudrate)
+    def __init__(self, port : str, baudrate : int):
+        self.model = Serial(port = port, baudrate = baudrate)
 
-    def close(self):
+    def send(self,msg = b"A") -> bytearray:
+        self.model.write(msg)
+
+    def close(self,msg) -> None:
         self.model.close()
-
-    def start(self,msg : bytearray):
-        self.model.write(msg)
-
-    def stop(self, msg):
-        self.model.write(msg)
-
-    def _make_msg(self):
-        pass
-
-    
