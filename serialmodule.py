@@ -1,14 +1,13 @@
 from serial import Serial
 
-
 class SerialManager:
     def __init__(self):
-        self.serial_connections = {}
+        self._serial_connections = {}
     
     def get_serial(self ,model : str, port : str) -> bool:
         try:
-            if model not in self.serial_connections:
-                self.serial_connections[model] = Serial(port=port)
+            if model not in self._serial_connections:
+                self._serial_connections[model] = Serial(port=port)
                 return True
         except Exception as e:
             print(e)
@@ -16,18 +15,18 @@ class SerialManager:
        
     def close_serial(self, model : str) -> bool:
         try:
-            if model in self.serial_connections:
-                self.serial_connections[model].close()
-                del self.serial_connections[model]
+            if model in self._serial_connections:
+                self._serial_connections[model].close()
+                del self._serial_connections[model]
         except Exception as e:
             print(e)
             return False
 
     def is_connected(self, model) -> bool:
-        return model in self.serial_connections
+        return model in self._serial_connections
     
-    def __getitem__(self,model):
-        return self.serial_connections.get(model)
+    def get_serial_instance(self,model):
+        return self._serial_connections.get(model, None)
 
 class SerialController():
     def __init__(self ,serial_manager : SerialManager):
@@ -43,12 +42,15 @@ class SerialController():
     def connection(self, model : str, port : str) -> bool:
         return False if self.serial_manager.is_connected(model) else self.serial_manager.get_serial(model,port)
     
+    # thread target func
     def only_read(self, model):
+        count = 0
         while(self.serial_manager.is_connected(model)):
-            serial = self.serial_manager.__getitem__(model)
-            key = serial.read()
-            msg = self.ser_msg[key]
-            if getattr(int,"msg"):
-                print(msg+"int \n")
-            else:
-                print(msg+"else \n")
+            serial = self.serial_manager.get_serial_instance(model)
+            if serial.in_waiting > 0:
+                key = serial.read().decode('utf-8')
+                msg = self.ser_msg.get(key)
+                if msg:
+                    print(msg)
+                else:
+                    print(key)

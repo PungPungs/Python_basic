@@ -8,7 +8,7 @@ class ThreadManager:
 
 
     def get_thread(self,model : str, func):
-        self.thread_connections[model] = Thread(daemon=True,target=func(model))
+        self.thread_connections[model] = Thread(daemon=True,target=func, args=[model])
         module = self.thread_connections.__getitem__(model)
         module.start()
     
@@ -24,4 +24,3 @@ class ThreadController:
 
     def connection(self,model, func):
         self.thread_manager.get_thread(model, func)
-
