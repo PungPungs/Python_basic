@@ -21,25 +21,64 @@ class Main(Ui_MainWindow, QMainWindow):
             "movements" : ["0","10","15","20","25"],
             "ports" : self.get_ports()
         }
-        self.set_config()
+
+        self._set_config()
 
 
         self.pb_sss.clicked.connect(lambda _ : self.open_and_close(model="sss"))
         self.pb_mag.clicked.connect(lambda _ : self.open_and_close(model="mag"))
         self.pb_ss.clicked.connect(lambda _ : self.open_and_close(model="ss"))
-        self.pb_sss_start.clicked.connect(self.run_thread)
-
+        self.pb_sss_start.clicked.connect(lambda _ : self.run_winch(model="sss"))
+        self.pb_mag_start.clicked.connect(lambda _ : self.run_winch(model="mag"))
+        self.pb_ss_start.clicked.connect(lambda _ : self.run_winch(model="ss"))
+        self.pb_sss_stop.clicked.connect(lambda _ : self.stop_winch(model="sss"))
+        self.pb_mag_stop.clicked.connect(lambda _ : self.stop_winch(model="mag"))
+        self.pb_ss_stop.clicked.connect(lambda _ : self.stop_winch(model="ss"))
         
         self.show()
-    
-    def run_thread(self):
-        self.thread_controller.connection("sss",self.serial_controller.only_read)
+    # msg_length,rpm, cw, mode, distance
+    def run_winch(self,model : str,mode : str = 'C'):
+        if self.serial_controller.is_connected(model):
+            distance = self.check_radio(model)
+            rpm = getattr(self,f"cb_rpm_{model}").currentText()
+            mode = ord(mode)
+            msg = [int(rpm)//100, mode, int(distance)]
+            msg.insert(0,len(msg))
+            if self.serial_controller.send_protocol(model,msg):
+                self.thread_controller.start_to_thread(model,self.thread_func)
+        else:
+            False
 
+    def stop_winch(self,model) -> None:
+        if self.serial_controller.send_protocol(model,['S']):
+            print("성공")
+        else:
+            print("실패")
+
+    def thread_func(self, model):
+        while(True):
+            key = self.serial_controller.receive_msg(model)
+            if key != None:
+                msg = self.serial_controller.SER_MSG.get(msg,None)
+                if msg:
+                    print(msg)
+            else:
+                break
 
     def open_and_close(self, model):
         port = getattr(self, f"cb_{model}").currentText()
         button = getattr(self, f"pb_{model}")
-        return button.setText("닫기") if self.serial_controller.connection(model, port) else button.setText("열기")
+        if self.serial_controller.connect_to_port(model, port):
+            button.setText("닫기")
+            print("연결 완료")
+        elif self.serial_controller.disconnect_to_port(model):
+            try:
+                self.thread_controller.stop_to_thread(model)
+            except:
+                pass
+            button.setText("열기")
+            print("닫기 완료")
+
 
     def check_radio(self, model):
         for idx, _ in enumerate(self.config["movements"]):
@@ -50,7 +89,7 @@ class Main(Ui_MainWindow, QMainWindow):
     def get_ports(self):
             return [port.device for port in list_ports.comports()]
 
-    def set_config(self):
+    def _set_config(self):
         for model in self.config["models"]:
             self._set_to_radio(f"rb_{model}", self.config["movements"])
             self._add_to_combo(f"cb_rpm_{model}", self.config["rpms"])
@@ -65,6 +104,7 @@ class Main(Ui_MainWindow, QMainWindow):
     def _set_to_radio(self,radio_name, items : list[str]) -> None:
         for idx,item in enumerate(items):
             getattr(self,f"{radio_name}_{idx}").setText(item)
+    
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

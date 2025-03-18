@@ -4,23 +4,27 @@ from threading import Thread
 class ThreadManager:
 
     def __init__(self):
-        self.thread_connections = {}
+        self._thread_connections = {}
 
 
-    def get_thread(self,model : str, func):
-        self.thread_connections[model] = Thread(daemon=True,target=func, args=[model])
-        module = self.thread_connections.__getitem__(model)
-        module.start()
+    def connect(self,model : str, func):
+        if model not in self._thread_connections:
+            self._thread_connections[model] = Thread(daemon=True,target=func, args=[model])
+            module = self._thread_connections.get(model, None)
+            return module.start()
+        else:
+            print("생성된 쓰레드가 존재합니다.")
+            return False
     
     def join_thread(self,model : str):
-        self.thread_connections[model].join()
-
-    def __getItem__(self,model):
-        return self.thread_connections.get(model)
+        self._thread_connections.get(model,None).join()
 
 class ThreadController:
     def __init__(self, thread_manager : ThreadManager):
-        self.thread_manager = thread_manager
+        self._thread_manager = thread_manager
 
-    def connection(self,model, func):
-        self.thread_manager.get_thread(model, func)
+    def start_to_thread(self,model, func):
+        return self._thread_manager.connect(model, func)
+    
+    def stop_to_thread(self,model):
+        self._thread_manager.join_thread(model)

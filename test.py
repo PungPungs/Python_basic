@@ -1,0 +1,1 @@
+print(False if None else True)
