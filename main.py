@@ -17,8 +17,9 @@ class Main(Ui_MainWindow, QMainWindow):
         # 가변 변수들..
         self.config = {
             "models" : ["sss", "mag", "ss"],
+            "types" : ["lift","winch"],
             "rpms" : ["100","300","500"],
-            "movements" : ["0","10","15","20","25"],
+            "distance" : ["0","10","15","20","25"],
             "ports" : self.get_ports()
         }
 
@@ -36,14 +37,15 @@ class Main(Ui_MainWindow, QMainWindow):
         self.pb_ss_stop.clicked.connect(lambda _ : self.stop_winch(model="ss"))
         
         self.show()
-    # msg_length,rpm, cw, mode, distance
-    def run_winch(self,model : str,mode : str = 'C'):
+    # msg_length,rpm, cw, distance
+    def run_winch(self,model : str,cw : str = 'D'):
         if self.serial_controller.is_connected(model):
+            types = 'L' if model == 'SSS' else 'W'
+            cw = ord(cw)
+            rpm = int(getattr(self,f"cb_rpm_{model}").currentText()) // 100
             distance = self.check_radio(model)
-            rpm = getattr(self,f"cb_rpm_{model}").currentText()
-            mode = ord(mode)
-            msg = [int(rpm)//100, mode, int(distance)]
-            msg.insert(0,len(msg))
+            msg = [ord(types), rpm, cw, int(distance)]
+            msg.insert(0,len(msg)+1)
             if self.serial_controller.send_protocol(model,msg):
                 self.thread_controller.start_to_thread(model,self.thread_func)
         else:
@@ -70,6 +72,7 @@ class Main(Ui_MainWindow, QMainWindow):
         button = getattr(self, f"pb_{model}")
         if self.serial_controller.connect_to_port(model, port):
             button.setText("닫기")
+            self.thread_controller.start_to_thread(model,self.thread_func)
             print("연결 완료")
         elif self.serial_controller.disconnect_to_port(model):
             try:
@@ -77,11 +80,12 @@ class Main(Ui_MainWindow, QMainWindow):
             except:
                 pass
             button.setText("열기")
+            self.thread_controller.stop_to_thread(model)
             print("닫기 완료")
 
 
     def check_radio(self, model):
-        for idx, _ in enumerate(self.config["movements"]):
+        for idx, _ in enumerate(self.config["distance"]):
             if getattr(self,f"rb_{model}_{idx}").isChecked():
                 return idx
         return -1
@@ -91,7 +95,7 @@ class Main(Ui_MainWindow, QMainWindow):
 
     def _set_config(self):
         for model in self.config["models"]:
-            self._set_to_radio(f"rb_{model}", self.config["movements"])
+            self._set_to_radio(f"rb_{model}", self.config["distance"])
             self._add_to_combo(f"cb_rpm_{model}", self.config["rpms"])
             self._add_to_combo(f"cb_{model}", self.config["ports"])
 

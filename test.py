@@ -1,1 +1,4 @@
-print(False if None else True)
+import struct
+
+a = 1
+print(struct.pack('H',a))

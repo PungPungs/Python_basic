@@ -8,7 +8,7 @@ class SerialManager:
     def connect(self ,model : str, port : str) -> bool:
         try:
             if model not in self._serial_connections:
-                self._serial_connections[model] = Serial(port=port)
+                self._serial_connections[model] = Serial(port=port,timeout=1)
                 return True
         except Exception as e:
             print(e)
@@ -38,9 +38,11 @@ class SerialManager:
             return False
         
     def receive_message(self,model):
-        serial = self._serial_connections.get(model, None)
+        serial : Serial= self._serial_connections.get(model, None)
         if serial:
             msg = serial.read()
+            print(msg)
+            print("msg")
             return msg
         else:
             return False
@@ -74,17 +76,27 @@ class SerialController():
 
 
     def send_protocol(self, model : str, msg : List) -> bool:
-        # [길이, ,속도, 이동거리]
+        """
+        types : lift or winch ['L' or 'W'], 1byte, unsigned char
+        cw : up or down ['U' or 'D'], 1byte, unsigned char
+        rpm : 0 ~ 500 [1 ~ 5], 1byte, unsigned char
+        distance : 
+            'W' -> 0 ~ 25m, 2byte, unsigned sort -> 0 ~ 25000 
+            'L' -> 0 ~ 40cm, 2byte, unsigned sort -> 0 ~ 400
+        0x2LD3
+        """
         if msg == ['S']:
             self.serial_manager.send_message(model,b'S')
             return True
-        elif len(msg) < 4:
+        elif len(msg) < 5:
             return False
         else:
-            byte_msg = b'0x2'+ struct.pack(">BBBI",msg[0],msg[1],msg[2],msg[3]) + b'0x3'
+            byte_msg = b'0x2'+ struct.pack("BBBBH",msg[0],msg[1],msg[2],msg[3],msg[4]) + b'0x3'
+            # byte_msg = b'0x2'+ struct.pack("B",msg[0]) + struct.pack("B",msg[1]) + struct.pack("B",msg[2]) + struct.pack("B",msg[3]) + struct.pack("H",msg[4]) + b'0x3'
         self.serial_manager.send_message(model, byte_msg)
         return True
     
     def receive_msg(self,model):
         msg = self.serial_manager.receive_message(model)
+        print(msg)
         True if msg else False
