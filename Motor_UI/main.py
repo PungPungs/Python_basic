@@ -41,13 +41,12 @@ class Main(Ui_MainWindow, QMainWindow):
     def run_winch(self,model : str,cw : str = 'D'):
         if self.serial_controller.is_connected(model):
             types = 'L' if model == 'SSS' else 'W'
-            cw = ord(cw)
+            cw = cw
             rpm = int(getattr(self,f"cb_rpm_{model}").currentText()) // 100
-            distance = self.check_radio(model)
-            msg = [ord(types), rpm, cw, int(distance)]
-            msg.insert(0,len(msg)+1)
-            if self.serial_controller.send_protocol(model,msg):
-                self.thread_controller.start_to_thread(model,self.thread_func)
+            distance = int(self.check_radio(model)) * 100
+            msg = [types, rpm, cw, distance]
+            msg.insert(0,len(msg))
+            self.serial_controller.send_protocol(model,msg)
         else:
             False
 
@@ -59,13 +58,14 @@ class Main(Ui_MainWindow, QMainWindow):
 
     def thread_func(self, model):
         while(True):
-            key = self.serial_controller.receive_msg(model)
-            if key != None:
-                msg = self.serial_controller.SER_MSG.get(msg,None)
-                if msg:
-                    print(msg)
-            else:
-                break
+            if self.serial_controller.readable(model):
+                key = self.serial_controller.receive_msg(model)
+                if key != None:
+                    msg = self.serial_controller.SER_MSG.get(msg,None)
+                    if msg:
+                        print(msg)
+                else:
+                    continue
 
     def open_and_close(self, model):
         port = getattr(self, f"cb_{model}").currentText()
@@ -85,9 +85,9 @@ class Main(Ui_MainWindow, QMainWindow):
 
 
     def check_radio(self, model):
-        for idx, _ in enumerate(self.config["distance"]):
+        for idx, value in enumerate(self.config["distance"]):
             if getattr(self,f"rb_{model}_{idx}").isChecked():
-                return idx
+                return value
         return -1
     
     def get_ports(self):

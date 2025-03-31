@@ -3,7 +3,7 @@ import struct
 from typing import Optional, List
 class SerialManager:
     def __init__(self):
-        self._serial_connections = {}    
+        self._serial_connections = {}
 
     def connect(self ,model : str, port : str) -> bool:
         try:
@@ -30,7 +30,7 @@ class SerialManager:
         return model in self._serial_connections and self._serial_connections[model].is_open
     
     def send_message(self,model, msg):
-        serial = self._serial_connections.get(model, None)
+        serial : Serial = self._serial_connections.get(model, None)
         if serial:
             serial.write(msg)
             return True
@@ -40,13 +40,18 @@ class SerialManager:
     def receive_message(self,model):
         serial : Serial= self._serial_connections.get(model, None)
         if serial:
-            msg = serial.read()
-            print(msg)
-            print("msg")
+            msg = serial.read(1)
             return msg
         else:
             return False
-    
+        
+    def readable(self,model):
+        serial : Serial= self._serial_connections.get(model, None)
+        try:
+            return True if serial.readable() else False
+        except:
+            return False
+        
 class SerialController():
     SER_MSG = {
                 'B' : '모터 시작',
@@ -72,11 +77,9 @@ class SerialController():
     def disconnect_to_port(self,model):
         return True if self.serial_manager.close_serial(model) else False
     
-
-
-
     def send_protocol(self, model : str, msg : List) -> bool:
         """
+        list_size : 5
         types : lift or winch ['L' or 'W'], 1byte, unsigned char
         cw : up or down ['U' or 'D'], 1byte, unsigned char
         rpm : 0 ~ 500 [1 ~ 5], 1byte, unsigned char
@@ -85,14 +88,23 @@ class SerialController():
             'L' -> 0 ~ 40cm, 2byte, unsigned sort -> 0 ~ 400
         0x2LD3
         """
+        print(msg)
+        byte_msg : List = []
+        for i in range(len(msg)):
+            if i == 4:
+                byte_msg.append(struct.pack('H', msg[i]))  # 'H'는 unsigned short (2바이트)
+            elif isinstance(msg[i], int):
+                byte_msg.append(struct.pack('B', msg[i]))  # 'B'는 unsigned char (1바이트)
+            elif isinstance(msg[i], str):
+                byte_msg.append(struct.pack('c', msg[i].encode()))  # 'c'는 char (1바이트), encode() 필요
         if msg == ['S']:
             self.serial_manager.send_message(model,b'S')
             return True
-        elif len(msg) < 5:
+        elif len(msg) < 4:
             return False
         else:
-            byte_msg = b'0x2'+ struct.pack("BBBBH",msg[0],msg[1],msg[2],msg[3],msg[4]) + b'0x3'
-            # byte_msg = b'0x2'+ struct.pack("B",msg[0]) + struct.pack("B",msg[1]) + struct.pack("B",msg[2]) + struct.pack("B",msg[3]) + struct.pack("H",msg[4]) + b'0x3'
+            byte_msg = b'\x02'+ byte_msg[0] + byte_msg[1] + byte_msg[2] + byte_msg[3] + byte_msg[4] + b'\x03'
+            # byte_msg = b'\x02'+ struct.pack('<BBBBH',msg[0],msg[1],msg[2],msg[3],msg[4]) + b'\x03'
         self.serial_manager.send_message(model, byte_msg)
         return True
     
@@ -100,3 +112,6 @@ class SerialController():
         msg = self.serial_manager.receive_message(model)
         print(msg)
         True if msg else False
+
+    def readable(self,model):
+        return True if self.serial_manager.readable(model) else False
