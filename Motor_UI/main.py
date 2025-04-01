@@ -13,6 +13,12 @@ class Main(Ui_MainWindow, QMainWindow):
         self.setupUi(self)
         self.serial_controller = serial_controller
         self.thread_controller = thread_controller
+        self.distant = 0
+        self.movement = {
+            "sss" : 3.92,
+            "mag" : 2.87,
+            "ss" : 2.87,
+        }
 
         # 가변 변수들..
         self.config = {
@@ -22,6 +28,7 @@ class Main(Ui_MainWindow, QMainWindow):
             "distance" : ["0","10","15","20","25"],
             "ports" : self.get_ports()
         }
+
 
         self._set_config()
 
@@ -45,7 +52,6 @@ class Main(Ui_MainWindow, QMainWindow):
             rpm = int(getattr(self,f"cb_rpm_{model}").currentText()) // 100
             distance = int(self.check_radio(model)) * 100
             msg = [types, rpm, cw, distance]
-            msg.insert(0,len(msg))
             self.serial_controller.send_protocol(model,msg)
         else:
             False
@@ -57,16 +63,23 @@ class Main(Ui_MainWindow, QMainWindow):
             print("실패")
 
     def thread_func(self, model):
-        while(True):
-            if self.serial_controller.readable(model):
-                key = self.serial_controller.receive_msg(model)
-                if key != None:
-                    msg = self.serial_controller.SER_MSG.get(msg,None)
-                    if msg:
-                        print(msg)
-                else:
-                    continue
-
+        try:
+            while(True):
+                if self.serial_controller.readable(model):
+                    key = self.serial_controller.receive_msg(model)
+                    if key:
+                        msg = self.serial_controller.SER_MSG.get(key.decode(),key)
+                        if msg == 'U':
+                            self.distant += self.movement.get(model,0)
+                        elif msg == 'D':
+                            self.distant -= self.movement.get(model,0)
+                    else:
+                        continue
+                    print(self.distant)
+                if not self.serial_controller.is_connected(model):
+                    return
+        except:
+            pass
     def open_and_close(self, model):
         port = getattr(self, f"cb_{model}").currentText()
         button = getattr(self, f"pb_{model}")
@@ -78,9 +91,8 @@ class Main(Ui_MainWindow, QMainWindow):
             try:
                 self.thread_controller.stop_to_thread(model)
             except:
-                pass
+                print("쓰레드 해제 실패")
             button.setText("열기")
-            self.thread_controller.stop_to_thread(model)
             print("닫기 완료")
 
 

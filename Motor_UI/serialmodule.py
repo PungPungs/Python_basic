@@ -57,8 +57,9 @@ class SerialController():
                 'B' : '모터 시작',
                 'S' : '모터 정지',
                 'E' : '모터 이동 완료',
-                'U' : 'U',
-                'D' : 'D'
+                'U' : 'up',
+                'D' : 'down',
+
             }
     def __init__(self ,serial_manager : SerialManager):
         self.serial_manager = serial_manager
@@ -88,30 +89,27 @@ class SerialController():
             'L' -> 0 ~ 40cm, 2byte, unsigned sort -> 0 ~ 400
         0x2LD3
         """
-        print(msg)
         byte_msg : List = []
-        for i in range(len(msg)):
-            if i == 4:
-                byte_msg.append(struct.pack('H', msg[i]))  # 'H'는 unsigned short (2바이트)
-            elif isinstance(msg[i], int):
-                byte_msg.append(struct.pack('B', msg[i]))  # 'B'는 unsigned char (1바이트)
-            elif isinstance(msg[i], str):
-                byte_msg.append(struct.pack('c', msg[i].encode()))  # 'c'는 char (1바이트), encode() 필요
         if msg == ['S']:
             self.serial_manager.send_message(model,b'S')
             return True
-        elif len(msg) < 4:
-            return False
         else:
-            byte_msg = b'\x02'+ byte_msg[0] + byte_msg[1] + byte_msg[2] + byte_msg[3] + byte_msg[4] + b'\x03'
+            for i in range(len(msg)):
+                if i == 3:
+                    byte_msg.append(struct.pack('>I', msg[i]))  # 'H'는 unsigned short (2바이트)
+                elif isinstance(msg[i], int):
+                    byte_msg.append(struct.pack('B', msg[i]))  # 'B'는 unsigned char (1바이트)
+                elif isinstance(msg[i], str):
+                    byte_msg.append(struct.pack('c', msg[i].encode()))  # 'c'는 char (1바이트), encode() 필요
+            middle_msg = b''.join(byte_msg)
+            byte_msg = b'\x02'+ struct.pack('B', len(middle_msg)) + middle_msg + b'\x03'
             # byte_msg = b'\x02'+ struct.pack('<BBBBH',msg[0],msg[1],msg[2],msg[3],msg[4]) + b'\x03'
-        self.serial_manager.send_message(model, byte_msg)
-        return True
+            self.serial_manager.send_message(model, byte_msg)
+            return True
     
     def receive_msg(self,model):
         msg = self.serial_manager.receive_message(model)
-        print(msg)
-        True if msg else False
+        return msg if msg else None
 
     def readable(self,model):
         return True if self.serial_manager.readable(model) else False

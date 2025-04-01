@@ -1,3 +1,2 @@
-a = b'\x02\x05W\x01D\xdc\x05\x03'
-for i in a:
-    print(i)
+a = b'B'
+print(True if a else False)

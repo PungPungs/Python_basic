@@ -18,6 +18,7 @@ class ThreadManager:
     
     def join_thread(self,model : str):
         self._thread_connections.get(model,None).join()
+        del self._thread_connections[model]
 
 class ThreadController:
     def __init__(self, thread_manager : ThreadManager):
