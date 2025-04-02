@@ -6,14 +6,40 @@ from threading import Thread
 # from customserial import SerialFactory
 from PySide6.QtWidgets import QMainWindow, QApplication
 import sys
+from multiprocessing import Process, Queue
+import multiprocessing
+from serial import Serial 
+from threading import Thread
+def mado(q):
+    proc = multiprocessing.current_process()
+    a = Serial("COM7")
+    while(1):
+        try:
+            if a.readable():
+                data = a.read().decode()
+                q.put(data)
+        except:
+            pass
 
+class mom(Thread):
+    def __init__(self,q):
+        super().__init__()
+        self.q = q
+        
+    def get_serial(self):
+        data = q.get()
+        if data == '\r' or data == '\n':
+            pass
+        else:
+            return data
 
 class Main(Ui_MainWindow, QMainWindow):
-    def __init__(self, serial_controller : SerialController, thread_controller : ThreadController):
+    def __init__(self, serial_controller : SerialController, thread_controller : ThreadController , q):
         super().__init__()
         self.setupUi(self)
         self.serial_controller = serial_controller
         self.thread_controller = thread_controller
+        self.mom = mom(q)
         self.distant = 0
         self.movement = {
             "sss" : 0.392,
@@ -44,10 +70,12 @@ class Main(Ui_MainWindow, QMainWindow):
         self.pb_ss_start.clicked.connect(lambda _ : self.run_winch(model="ss"))
         self.pb_sss_stop.clicked.connect(lambda _ : self.stop_winch(model="sss"))
         self.pb_mag_stop.clicked.connect(lambda _ : self.stop_winch(model="mag"))
-        self.pb_ss_stop.clicked.connect(lambda _ : self.stop_winch(model="ss"))
+        self.pb_ss_stop.clicked.connect(self.printer)
         
         self.show()
+
     # msg_length,rpm, cw, distance
+
     def run_winch(self,model : str, cw : str = 'D'):
         if self.serial_controller.is_connected(model):
             types = 'L' if model == 'sss' else 'W'
@@ -64,23 +92,17 @@ class Main(Ui_MainWindow, QMainWindow):
             print("성공")
         else:
             print("실패")
+    
+    def printer(self):
+        while(1):
+            if self.data != None:
+                print(f"넘어온 데이터 : {self.data}")
 
     def thread_func(self, model):
+        self.mom.start() 
         try:
             while(True):
-                if self.serial_controller.readable(model):
-                    key = self.serial_controller.receive_msg(model)
-                    if key:
-                        msg = self.serial_controller.SER_MSG.get(key.decode(),key)
-                        if msg == 'U':
-                            self.distant += self.movement.get(model,0)
-                        elif msg == 'D':
-                            self.distant -= self.movement.get(model,0)
-                        else:
-                            print(msg)
-                    print(self.distant)
-                if not self.serial_controller.is_connected(model):
-                    return
+                self.data = self.mom.get_serial()      
         except:
             pass
         
@@ -127,10 +149,13 @@ class Main(Ui_MainWindow, QMainWindow):
     
 
 if __name__ == "__main__":
+    q = Queue()
+    p = Process(name="serial",target=mado,args=(q,),daemon=True)
+    p.start()
     app = QApplication(sys.argv)
     serial_manager = SerialManager()
     thread_manager = ThreadManager()
     serial_controller = SerialController(serial_manager)
     thread_controller = ThreadController(thread_manager)
-    main = Main(serial_controller, thread_controller)
+    main = Main(serial_controller, thread_controller, q)
     sys.exit(app.exec())

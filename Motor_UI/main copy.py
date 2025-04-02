@@ -6,17 +6,42 @@ from threading import Thread
 # from customserial import SerialFactory
 from PySide6.QtWidgets import QMainWindow, QApplication
 import sys
-from processingmodule import ProcessManager, ProcessController
+from  multiprocessing import Process, Queue
+import multiprocessing
+from serial import Serial
 
+def calc(q):
+    pro = multiprocessing.current_process()
+    model = Serial("COM7",timeout=1)
+    while True:
+        try:
+            if model.readable():
+                data = model.read().decode()
+                if data != '\r' and data != '\n':
+                    q.put(data)
+        except Exception as e:
+            print(e)
+
+class Caluate(Thread):
+    def __init__(self,q):
+        super().__init__()
+        self.q = q
+
+    def run(self):
+        while True:
+            data = self.q.get()
+            if data:
+                print(data)
 
 class Main(Ui_MainWindow, QMainWindow):
-    def __init__(self, serial_controller : SerialController, thread_controller : ThreadController , process_controller : ProcessController):
+    def __init__(self, serial_controller : SerialController, thread_controller : ThreadController,q):
         super().__init__()
         self.setupUi(self)
         self.serial_controller = serial_controller
         self.thread_controller = thread_controller
-        self.process_controller = process_controller
-
+        self.caluate = Caluate(q)
+        self.caluate.start()
+        self.distant = 0
         self.movement = {
             "sss" : 0.392,
             "mag" : 2.872,
@@ -34,11 +59,6 @@ class Main(Ui_MainWindow, QMainWindow):
             "ports" : self.get_ports()
         }
 
-        self.distance_record = {
-            "sss" : 0,
-            "mag" : 0,
-            "ss" : 0,
-        }
 
         self._set_config()
 
@@ -52,7 +72,7 @@ class Main(Ui_MainWindow, QMainWindow):
         self.pb_sss_stop.clicked.connect(lambda _ : self.stop_winch(model="sss"))
         self.pb_mag_stop.clicked.connect(lambda _ : self.stop_winch(model="mag"))
         self.pb_ss_stop.clicked.connect(lambda _ : self.stop_winch(model="ss"))
-       
+        
         self.show()
     # msg_length,rpm, cw, distance
     def run_winch(self,model : str, cw : str = 'D'):
@@ -80,41 +100,17 @@ class Main(Ui_MainWindow, QMainWindow):
                     if key:
                         msg = self.serial_controller.SER_MSG.get(key.decode(),key)
                         if msg == 'U':
-                            self.distance_record[model] += self.movement.get(model,0)
+                            self.distant += self.movement.get(model,0)
                         elif msg == 'D':
-                            self.distance_record[model] -= self.movement.get(model,0)
+                            self.distant -= self.movement.get(model,0)
                         else:
                             print(msg)
-                    print(self.distance_record[model])
+                    print(self.distant)
                 if not self.serial_controller.is_connected(model):
                     return
         except:
             pass
-
-
-    def process_func(self,model):
-        while(1):
-            try:
-                val = self.distance_record[model]
-                self.txt_write(model, val)
-            except Exception as p:
-                print(p)
-                
-    def txt_read(self,model):
-        with open(f'./record/{model}.txt','a+') as file:
-            if file.readable():
-                return file.read()
-            else:
-                print("txt 불러올 수 없음")
-
-    def txt_write(self,model, distance):
-        distance = str(distance)
-        with open(f'./record/{model}.txt','a+') as file:
-            if file.writable():
-                file.write(distance)
-
-
-
+        
     def open_and_close(self, model):
         port = getattr(self, f"cb_{model}").currentText()
         button = getattr(self, f"pb_{model}")
@@ -145,10 +141,6 @@ class Main(Ui_MainWindow, QMainWindow):
             self._set_to_radio(f"rb_{model}", self.config[model])
             self._add_to_combo(f"cb_rpm_{model}", self.config["rpms"])
             self._add_to_combo(f"cb_{model}", self.config["ports"])
-            self.distance_record[model] = self.txt_read(model)
-        self.process_controller.start_to_process('sss',self.txt_write)
-        self.process_controller.start_to_process('mag',self.txt_write)
-        self.process_controller.start_to_process('ss',self.txt_write)
 
     def _add_to_combo(self,combo_name : str, items: list[str]) -> None:
         combobox = getattr(self,combo_name)
@@ -159,15 +151,19 @@ class Main(Ui_MainWindow, QMainWindow):
     def _set_to_radio(self,radio_name, items : list[str]) -> None:
         for idx,item in enumerate(items):
             getattr(self,f"{radio_name}_{idx}").setText(item)
-    
+
+
+
+
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    que = Queue()
+    proc = Process(name="calc", target=calc, args=(que,), daemon=True)
+    proc.start()
     serial_manager = SerialManager()
     thread_manager = ThreadManager()
-    process_manager = ProcessManager()
     serial_controller = SerialController(serial_manager)
     thread_controller = ThreadController(thread_manager)
-    process_controller = ProcessController(process_manager)
-    main = Main(serial_controller, thread_controller,process_controller)
+    app = QApplication(sys.argv)
+    main = Main(serial_controller, thread_controller, que)
     sys.exit(app.exec())
