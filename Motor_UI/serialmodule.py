@@ -1,6 +1,7 @@
 from serial import Serial
 import struct
 from typing import Optional, List
+import time
 class SerialManager:
     def __init__(self):
         self._serial_connections = {}
@@ -9,6 +10,7 @@ class SerialManager:
         try:
             if model not in self._serial_connections:
                 self._serial_connections[model] = Serial(port=port,timeout=1)
+                time.sleep(2)
                 return True
         except Exception as e:
             print(e)
@@ -57,8 +59,8 @@ class SerialController():
                 'B' : '모터 시작',
                 'S' : '모터 정지',
                 'E' : '모터 이동 완료',
-                'U' : 'up',
-                'D' : 'down',
+                'U' : 'U',
+                'D' : 'D',
 
             }
     def __init__(self ,serial_manager : SerialManager):
@@ -96,7 +98,7 @@ class SerialController():
         else:
             for i in range(len(msg)):
                 if i == 3:
-                    byte_msg.append(struct.pack('>I', msg[i]))  # 'H'는 unsigned short (2바이트)
+                    byte_msg.append(struct.pack('>H', msg[i]))  # 'H'는 unsigned short (2바이트)
                 elif isinstance(msg[i], int):
                     byte_msg.append(struct.pack('B', msg[i]))  # 'B'는 unsigned char (1바이트)
                 elif isinstance(msg[i], str):
@@ -105,6 +107,7 @@ class SerialController():
             byte_msg = b'\x02'+ struct.pack('B', len(middle_msg)) + middle_msg + b'\x03'
             # byte_msg = b'\x02'+ struct.pack('<BBBBH',msg[0],msg[1],msg[2],msg[3],msg[4]) + b'\x03'
             self.serial_manager.send_message(model, byte_msg)
+            print(msg)
             return True
     
     def receive_msg(self,model):

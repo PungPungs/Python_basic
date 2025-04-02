@@ -10,13 +10,13 @@ from processingmodule import ProcessManager, ProcessController
 
 
 class Main(Ui_MainWindow, QMainWindow):
-    def __init__(self, serial_controller : SerialController, thread_controller : ThreadController , process_manager : ProcessManager):
+    def __init__(self, serial_controller : SerialController, thread_controller : ThreadController , process_controller : ProcessController):
         super().__init__()
         self.setupUi(self)
         self.serial_controller = serial_controller
         self.thread_controller = thread_controller
-        self.process_manager = process_manager
-        self.distant = 0
+        self.process_controller = process_controller
+
         self.movement = {
             "sss" : 0.392,
             "mag" : 2.872,
@@ -34,6 +34,11 @@ class Main(Ui_MainWindow, QMainWindow):
             "ports" : self.get_ports()
         }
 
+        self.distance_record = {
+            "sss" : 0,
+            "mag" : 0,
+            "ss" : 0,
+        }
 
         self._set_config()
 
@@ -47,7 +52,7 @@ class Main(Ui_MainWindow, QMainWindow):
         self.pb_sss_stop.clicked.connect(lambda _ : self.stop_winch(model="sss"))
         self.pb_mag_stop.clicked.connect(lambda _ : self.stop_winch(model="mag"))
         self.pb_ss_stop.clicked.connect(lambda _ : self.stop_winch(model="ss"))
-        
+       
         self.show()
     # msg_length,rpm, cw, distance
     def run_winch(self,model : str, cw : str = 'D'):
@@ -75,17 +80,41 @@ class Main(Ui_MainWindow, QMainWindow):
                     if key:
                         msg = self.serial_controller.SER_MSG.get(key.decode(),key)
                         if msg == 'U':
-                            self.distant += self.movement.get(model,0)
+                            self.distance_record[model] += self.movement.get(model,0)
                         elif msg == 'D':
-                            self.distant -= self.movement.get(model,0)
+                            self.distance_record[model] -= self.movement.get(model,0)
                         else:
                             print(msg)
-                    print(self.distant)
+                    print(self.distance_record[model])
                 if not self.serial_controller.is_connected(model):
                     return
         except:
             pass
-        
+
+
+    def process_func(self,model):
+        while(1):
+            try:
+                val = self.distance_record[model]
+                self.txt_write(model, val)
+            except Exception as p:
+                print(p)
+                
+    def txt_read(self,model):
+        with open(f'./record/{model}.txt','a+') as file:
+            if file.readable():
+                return file.read()
+            else:
+                print("txt 불러올 수 없음")
+
+    def txt_write(self,model, distance):
+        distance = str(distance)
+        with open(f'./record/{model}.txt','a+') as file:
+            if file.writable():
+                file.write(distance)
+
+
+
     def open_and_close(self, model):
         port = getattr(self, f"cb_{model}").currentText()
         button = getattr(self, f"pb_{model}")
@@ -116,6 +145,10 @@ class Main(Ui_MainWindow, QMainWindow):
             self._set_to_radio(f"rb_{model}", self.config[model])
             self._add_to_combo(f"cb_rpm_{model}", self.config["rpms"])
             self._add_to_combo(f"cb_{model}", self.config["ports"])
+            self.distance_record[model] = self.txt_read(model)
+        self.process_controller.start_to_process('sss',self.txt_write)
+        self.process_controller.start_to_process('mag',self.txt_write)
+        self.process_controller.start_to_process('ss',self.txt_write)
 
     def _add_to_combo(self,combo_name : str, items: list[str]) -> None:
         combobox = getattr(self,combo_name)
