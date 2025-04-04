@@ -6,6 +6,7 @@ from threading import Thread
 # from customserial import SerialFactory
 from PySide6.QtWidgets import QMainWindow, QApplication
 import sys
+from PySide6.QtCore import QMetaObject, Q_ARG, Qt
 
 
 class Main(Ui_MainWindow, QMainWindow):
@@ -14,7 +15,7 @@ class Main(Ui_MainWindow, QMainWindow):
         self.setupUi(self)
         self.serial_controller = serial_controller
         self.thread_controller = thread_controller
-        self.distant = 0
+        self.distance = 0
         self.movement = {
             "sss" : 0.392,
             "mag" : 2.872,
@@ -73,12 +74,12 @@ class Main(Ui_MainWindow, QMainWindow):
                     if key:
                         msg = self.serial_controller.SER_MSG.get(key.decode(),key)
                         if msg == 'U':
-                            self.distant += self.movement.get(model,0)
+                            self.distance += self.movement.get(model,0)
                         elif msg == 'D':
-                            self.distant -= self.movement.get(model,0)
-                        else:
-                            print(msg)
-                    print(self.distant)
+                            self.distance -= self.movement.get(model,0)
+                    te = getattr(self,f"te_{model}_distance")
+                    _distance =str(self.distance) + "mm"
+                    QMetaObject.invokeMethod(te, "setText", Qt.QueuedConnection,Q_ARG(str,_distance))
                 if not self.serial_controller.is_connected(model):
                     return
         except:

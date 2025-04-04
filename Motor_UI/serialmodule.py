@@ -9,7 +9,7 @@ class SerialManager:
     def connect(self ,model : str, port : str) -> bool:
         try:
             if model not in self._serial_connections:
-                self._serial_connections[model] = Serial(port=port,timeout=1)
+                self._serial_connections[model] = Serial(port=port,timeout=1, baudrate=9600)
                 time.sleep(2)
                 return True
         except Exception as e:
