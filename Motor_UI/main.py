@@ -6,7 +6,8 @@ from threading import Thread
 # from customserial import SerialFactory
 from PySide6.QtWidgets import QMainWindow, QApplication
 import sys
-
+from PySide6.QtCore import QMetaObject, Q_ARG, Qt, Signal
+import os
 
 class Main(Ui_MainWindow, QMainWindow):
     def __init__(self, serial_controller : SerialController, thread_controller : ThreadController):
@@ -14,7 +15,12 @@ class Main(Ui_MainWindow, QMainWindow):
         self.setupUi(self)
         self.serial_controller = serial_controller
         self.thread_controller = thread_controller
-        self.distant = 0
+        self.distance = {
+            "sss" : 0,
+            "mag" : 0,
+            "ss" : 0
+        }
+
         self.movement = {
             "sss" : 0.392,
             "mag" : 2.872,
@@ -25,16 +31,25 @@ class Main(Ui_MainWindow, QMainWindow):
         self.config = {
             "models" : ["sss", "mag", "ss"],
             "types" : ["lift","winch"],
-            "rpms" : ["100","300","500"],
+            "rpms" : ["100","200","300","400","500"],
             "sss" : ["0","1","2","3","4"],
             "mag" : ["0","100","150","200","250"],
             "ss" : ["0","100","150","200","250"],
             "ports" : self.get_ports()
         }
 
+        # 단위를 표기해야하는데 깔끔한 방법이 없을까?
+        # self.config = {
+        #     "models" : ["sss", "mag", "ss"],
+        #     "types" : ["lift","winch"],
+        #     "rpms" : ["100","200","300","400","500"],
+        #     "sss" : ["0","1","2","3","4"],
+        #     "mag" : ["0","100","150","200","250"],
+        #     "ss" : ["0","100","150","200","250"],
+        #     "ports" : self.get_ports()
+        # }
 
         self._set_config()
-
 
         self.pb_sss.clicked.connect(lambda _ : self.open_and_close(model="sss"))
         self.pb_mag.clicked.connect(lambda _ : self.open_and_close(model="mag"))
@@ -48,12 +63,12 @@ class Main(Ui_MainWindow, QMainWindow):
         
         self.show()
     # msg_length,rpm, cw, distance
-    def run_winch(self,model : str, cw : str = 'D'):
+    def run_winch(self,model : str):
         if self.serial_controller.is_connected(model):
             types = 'L' if model == 'sss' else 'W'
-            cw = cw
             rpm = int(getattr(self,f"cb_rpm_{model}").currentText()) // 100
             distance = int(self.check_radio(model)) * 100
+            cw,distance = self.calculate_distance(model,distance)
             msg = [types, rpm, cw, distance]
             self.serial_controller.send_protocol(model,msg)
         else:
@@ -61,9 +76,9 @@ class Main(Ui_MainWindow, QMainWindow):
 
     def stop_winch(self,model) -> None:
         if self.serial_controller.send_protocol(model,['S']):
-            print("성공")
+            self._write_state(model,"성공")
         else:
-            print("실패")
+            self._write_state(model,"실패")
 
     def thread_func(self, model):
         try:
@@ -73,12 +88,14 @@ class Main(Ui_MainWindow, QMainWindow):
                     if key:
                         msg = self.serial_controller.SER_MSG.get(key.decode(),key)
                         if msg == 'U':
-                            self.distant += self.movement.get(model,0)
+                            self.distance[model] -= self.movement.get(model,0)
                         elif msg == 'D':
-                            self.distant -= self.movement.get(model,0)
+                            self.distance[model] += self.movement.get(model,0)
                         else:
-                            print(msg)
-                    print(self.distant)
+                            QMetaObject.invokeMethod(getattr(self,f"te_{model}_state"), "setText", Qt.QueuedConnection,Q_ARG(str,str(msg)))
+                    _distance =str(self.distance.get(model,'0')) + "mm"
+                    QMetaObject.invokeMethod(getattr(self,f"te_{model}_distance"), "setText", Qt.QueuedConnection,Q_ARG(str,_distance))
+                    self._write_distance(model)
                 if not self.serial_controller.is_connected(model):
                     return
         except:
@@ -90,14 +107,14 @@ class Main(Ui_MainWindow, QMainWindow):
         if self.serial_controller.connect_to_port(model, port):
             button.setText("닫기")
             self.thread_controller.start_to_thread(model,self.thread_func)
-            print("연결 완료")
+            self._write_state(model,"연결 완료")
         elif self.serial_controller.disconnect_to_port(model):
             try:
                 self.thread_controller.stop_to_thread(model)
             except:
-                print("쓰레드 해제 실패")
+                self._write_state(model,"쓰레드 해제 실패")
             button.setText("열기")
-            print("닫기 완료")
+            self._write_state(model,"닫기 완료")
 
 
     def check_radio(self, model):
@@ -114,6 +131,7 @@ class Main(Ui_MainWindow, QMainWindow):
             self._set_to_radio(f"rb_{model}", self.config[model])
             self._add_to_combo(f"cb_rpm_{model}", self.config["rpms"])
             self._add_to_combo(f"cb_{model}", self.config["ports"])
+            self._read_distance(model)
 
     def _add_to_combo(self,combo_name : str, items: list[str]) -> None:
         combobox = getattr(self,combo_name)
@@ -124,6 +142,49 @@ class Main(Ui_MainWindow, QMainWindow):
     def _set_to_radio(self,radio_name, items : list[str]) -> None:
         for idx,item in enumerate(items):
             getattr(self,f"{radio_name}_{idx}").setText(item)
+
+    def _read_distance(self,model):
+        items = os.listdir()
+        if 'record' not in items:
+            os.mkdir('record')
+        path = f'./record/{model}.txt'
+        with open(path,'r') as txt:
+            if txt.readable():
+                self.distance[model] = float(txt.read())
+            else:
+                self.distance[model] = 0
+
+    def _write_distance(self,model):
+        items = os.listdir()
+        if 'record' not in items:
+            os.mkdir('record')
+        path = f'./record/{model}.txt'
+        with open(path,'w') as txt:
+                txt.write(str(self.distance.get(model,0)))
+
+
+    def calculate_distance(self,model,distance) -> int:
+        now = self.distance.get(model, 0)
+        _cw = ""
+        r_distance = 0
+        # 현재보다 목표보다 작으면
+        # 30mm > 20mm = 10mm U
+        if now > distance:
+            r_distance = now - distance
+            _cw = 'U'
+        # 20mm < 30mm
+        elif now < distance:
+            r_distance = distance - now
+            _cw = 'D'
+        elif now == distance or now == 0:
+            return
+        return _cw, int(r_distance)
+    
+    def _write_state(self, model : str, msg : str) -> None:
+        state = getattr(self,f"te_{model}_state")
+        state.setText(msg)
+
+
     
 
 if __name__ == "__main__":
