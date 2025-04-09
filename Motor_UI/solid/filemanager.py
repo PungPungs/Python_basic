@@ -11,9 +11,9 @@ class TxtManager:
         '''
         path = os.path.join(self.base_path,model + ".txt")
         try:
-            with open(path,'x') as txt:
+            with open(path,'r') as txt:
                 if txt.readable():
-                    distance = float(txt.read())
+                    distance = float(txt.read().replace("mm",''))
                 else:
                     distance = 0
             return distance
