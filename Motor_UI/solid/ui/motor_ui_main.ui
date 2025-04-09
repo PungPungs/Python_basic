@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>430</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>모던 모터 컨트롤 프로그램</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* ===== 기본 폰트 및 공통 ===== */
+* {
+    font-family: 'Inter', 'Pretendard', 'Segoe UI', 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    color: #2f2f2f;
+}
+
+/* ===== 전체 배경 ===== */
+QMainWindow, QWidget {
+    background-color: #e6f2fb;
+}
+
+/* ===== 프로그램 헤더 라벨 (제거 효과) ===== */
+#label_header_title {
+    color: transparent;
+    background-color: transparent;
+    font-size: 0px;
+    height: 0px;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* ===== 그룹 박스 ===== */
+QGroupBox {
+    border: 1px solid #bcdff1;
+    border-radius: 8px;
+    margin-top: 12px;
+    background-color: #f2f9fd;
+    padding: 12px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 6px 12px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #1e4b6d;
+}
+
+/* ===== 라벨 ===== */
+QLabel {
+    font-size: 14px;
+    font-weight: 500;
+    color: #2f2f2f;
+    background-color: #f2f9fd;
+}
+
+/* ===== 콤보박스 ===== */
+QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #c0ddeb;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+}
+QComboBox:hover {
+    border-color: #96c9e0;
+}
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #c0ddeb;
+}
+
+/* ===== 텍스트 에디트 ===== */
+QTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #c0ddeb;
+    border-radius: 6px;
+    padding: 4px 6px;
+    color: #2f2f2f;
+    font-size: 13px;
+}
+QTextEdit QScrollBar:vertical,
+QTextEdit QScrollBar:horizontal {
+    width: 0px;
+    height: 0px;
+}
+
+/* ===== 기본 버튼 ===== */
+QPushButton {
+    background-color: #d3ecf9;
+    border: 1px solid #a2cbe3;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e4b6d;
+}
+QPushButton:hover {
+    background-color: #c0e2f5;
+}
+QPushButton:pressed {
+    background-color: #aad3ea;
+}
+
+/* ===== 시작 버튼 (연한 하늘+민트톤) ===== */
+#pb_sss_start, #pb_mag_start, #pb_ss_start {
+    background-color: #a7dff7;
+    color: #ffffff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: bold;
+}
+#pb_sss_start:hover, #pb_mag_start:hover, #pb_ss_start:hover {
+    background-color: #8fd3ee;
+}
+
+/* ===== 정지 버튼 (톤다운 핑크) ===== */
+#pb_sss_stop, #pb_mag_stop, #pb_ss_stop {
+    background-color: #f2b6b6;
+    color: #ffffff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: bold;
+}
+#pb_sss_stop:hover, #pb_mag_stop:hover, #pb_ss_stop:hover {
+    background-color: #e89fa2;
+}
+
+/* ===== 라디오 버튼 ===== */
+QRadioButton {
+    font-size: 14px;
+    font-weight: 500;
+    padding-left: 4px;
+    color: #2f2f2f;
+    background-color: #f2f9fd;
+}
+QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+}
+QRadioButton::indicator::unchecked {
+    border-radius: 8px;
+    border: 2px solid #79c2f2;
+}
+QRadioButton::indicator::checked {
+    background-color: #79c2f2;
+    border-radius: 8px;
+}
+
+/* ===== 체크박스 ===== */
+QCheckBox {
+    font-size: 14px;
+    padding-left: 4px;
+    color: #2f2f2f;
+    background-color: #f2f9fd;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 2px solid #79c2f2;
+    background: white;
+}
+QCheckBox::indicator:checked {
+    background-color: #79c2f2;
+    image: none;
+}
+</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="mainLayout">
+    <item>
+     <widget class="QGroupBox" name="group_sss">
+      <property name="title">
+       <string>SSS</string>
+      </property>
+      <layout class="QVBoxLayout" name="layout_sss">
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_port_sss">
+           <property name="text">
+            <string>Port</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cb_sss"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_sss">
+           <property name="text">
+            <string>열기</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_rpm_sss">
+           <property name="text">
+            <string>RPM</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cb_rpm_sss"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_motor_sss">
+         <property name="text">
+          <string>모터 선택</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_sss_0">
+         <property name="text">
+          <string>0</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_sss_1">
+         <property name="text">
+          <string>1</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_sss_2">
+         <property name="text">
+          <string>2</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_sss_3">
+         <property name="text">
+          <string>3</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_sss_4">
+         <property name="text">
+          <string>4</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_distance_sss">
+           <property name="text">
+            <string>이동거리</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="te_sss_distance"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_state_sss">
+           <property name="text">
+            <string>상태</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="te_sss_state"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QPushButton" name="pb_sss_start">
+           <property name="styleSheet">
+            <string>background-color: #4CAF50; color: white; border-radius: 5px;</string>
+           </property>
+           <property name="text">
+            <string>시작</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_sss_stop">
+           <property name="styleSheet">
+            <string>background-color: #F44336; color: white; border-radius: 5px;</string>
+           </property>
+           <property name="text">
+            <string>정지</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="group_mag">
+      <property name="title">
+       <string>Mag</string>
+      </property>
+      <layout class="QVBoxLayout" name="layout_mag">
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_port_mag">
+           <property name="text">
+            <string>Port</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cb_mag"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_mag">
+           <property name="text">
+            <string>열기</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_rpm_mag">
+           <property name="text">
+            <string>RPM</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cb_rpm_mag"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_motor_mag">
+         <property name="text">
+          <string>모터 선택</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_mag_0">
+         <property name="text">
+          <string>0</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_mag_1">
+         <property name="text">
+          <string>1</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_mag_2">
+         <property name="text">
+          <string>2</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_mag_3">
+         <property name="text">
+          <string>3</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_mag_4">
+         <property name="text">
+          <string>4</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_distance_mag">
+           <property name="text">
+            <string>이동거리</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="te_mag_distance"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_state_mag">
+           <property name="text">
+            <string>상태</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="te_mag_state"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QPushButton" name="pb_mag_start">
+           <property name="styleSheet">
+            <string>background-color: #4CAF50; color: white; border-radius: 5px;</string>
+           </property>
+           <property name="text">
+            <string>시작</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_mag_stop">
+           <property name="styleSheet">
+            <string>background-color: #F44336; color: white; border-radius: 5px;</string>
+           </property>
+           <property name="text">
+            <string>정지</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="group_ss">
+      <property name="title">
+       <string>SS</string>
+      </property>
+      <layout class="QVBoxLayout" name="layout_ss">
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_port_ss">
+           <property name="text">
+            <string>Port</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cb_ss"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_ss">
+           <property name="text">
+            <string>열기</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_rpm_ss">
+           <property name="text">
+            <string>RPM</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cb_rpm_ss"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_motor_ss">
+         <property name="text">
+          <string>모터 선택</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_ss_0">
+         <property name="text">
+          <string>0</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_ss_1">
+         <property name="text">
+          <string>1</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_ss_2">
+         <property name="text">
+          <string>2</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_ss_3">
+         <property name="text">
+          <string>3</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rb_ss_4">
+         <property name="text">
+          <string>4</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_distance_ss">
+           <property name="text">
+            <string>이동거리</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="te_ss_distance"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label_state_ss">
+           <property name="text">
+            <string>상태</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="te_ss_state"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QPushButton" name="pb_ss_start">
+           <property name="styleSheet">
+            <string>background-color: #4CAF50; color: white; border-radius: 5px;</string>
+           </property>
+           <property name="text">
+            <string>시작</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_ss_stop">
+           <property name="styleSheet">
+            <string>background-color: #F44336; color: white; border-radius: 5px;</string>
+           </property>
+           <property name="text">
+            <string>정지</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
