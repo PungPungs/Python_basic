@@ -63,6 +63,7 @@ class SerialController():
                 'E' : '모터 이동 완료',
                 'U' : 'U',
                 'D' : 'D',
+                'C' : '긴급 정지'
 
             }
     def __init__(self ,serial_manager : SerialManager):

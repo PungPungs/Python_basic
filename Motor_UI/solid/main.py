@@ -66,6 +66,10 @@ class Main(Ui_MainWindow, QMainWindow):
                     key = self.serial_controller.receive_msg(model)
                     if key:
                         msg = self.serial_controller.SER_MSG.get(key.decode(),key)
+                        print(key, msg)
+                        if key == b'C':
+                            self.stop_winch(model)
+                            self.models[model].distance = 0
                         if self.models[model].update_distance(msg) == False:
                             QMetaObject.invokeMethod(getattr(self,f"te_{model}_state"), "setText", Qt.QueuedConnection,Q_ARG(str,str(msg)))
                     _distance =str(self.models[model].distance//1) + "mm"
@@ -73,8 +77,8 @@ class Main(Ui_MainWindow, QMainWindow):
                     self.txt_manager.save(model,_distance)
                 if not self.serial_controller.is_connected(model):
                     return
-        except:
-            pass
+        except Exception as e:
+            print(e)
         
     def open_and_close(self, model):
         port = getattr(self, f"cb_{model}").currentText()
