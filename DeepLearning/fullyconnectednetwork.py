@@ -80,9 +80,13 @@ class FullyConnectedNetwork:
         self.t = t
         loss = self.activeLayer.forward(self.y,t)
         return loss
+    
+    def backward(self):
+        self.activeLayer.backward()
 
 if __name__ == "__main__":
     x = np.random.randn(3,5)
     network = FullyConnectedNetwork(5,3,5)
     result = network.predict(x)
+    result = network.backward()
     print(result)
