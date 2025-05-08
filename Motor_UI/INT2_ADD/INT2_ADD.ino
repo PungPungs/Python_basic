@@ -17,7 +17,6 @@
 #include <stdbool.h>
 #include <avr/interrupt.h>
 
-bool interupt_cnt = false;
 
 unsigned char length;
 unsigned char way = 'N';
@@ -87,12 +86,10 @@ bool motor_start(unsigned char *buffer) {
 	switch(rpm){
 		case 1:
 			for (volatile unsigned long i = 0; i < pulse; i++){
-			if (interupt_cnt == true){return;}
 			PORTD |= 0x40;
-			_delay_us(100);
+			_delay_us(300);
 			PORTD &= ~(0x40);
-			_delay_us(100);
-      if (i % 100 == 0){uartPut(way);}
+			_delay_us(300);
 			if (UDR0 == 'S') {
 				uartPut('S');
 				PORTB &= ~(0x2);
@@ -102,9 +99,9 @@ bool motor_start(unsigned char *buffer) {
 		case 2:
 			for (volatile unsigned long i = 0; i < pulse; i++){
 				PORTD |= 0x40;
-				_delay_us(60);
+				_delay_us(150);
 				PORTD &= ~(0x40);
-				_delay_us(60);
+				_delay_us(150);
 				if (UDR0 == 'S') {
 					uartPut('S');
 					PORTB &= ~(0x2);
@@ -114,10 +111,9 @@ bool motor_start(unsigned char *buffer) {
 		case 3:
 			for (volatile unsigned long i = 0; i < pulse; i++){
 				PORTD |= 0x40;
-				_delay_us(60);
+				_delay_us(100);
 				PORTD &= ~(0x40);
-				_delay_us(60);
-				if (i % 100 == 0){uartPut(way);}
+				_delay_us(100);
 				if (UDR0 == 'S') {
 					uartPut('S');
 					PORTB &= ~(0x2);
@@ -127,9 +123,9 @@ bool motor_start(unsigned char *buffer) {
 		case 4:
 			for (volatile unsigned long i = 0; i < pulse; i++){
 				PORTD |= 0x40;
-				_delay_us(60);
+				_delay_us(75);
 				PORTD &= ~(0x40);
-				_delay_us(60);
+				_delay_us(75);
 				if (UDR0 == 'S') {
 					uartPut('S');
 					PORTB &= ~(0x2);
@@ -169,7 +165,6 @@ int main() {
 	// 전역 인터럽트 활성화
 	sei();
 	while (true) {
-		interupt_cnt = false;
 		if (receive_data(buffer, &length)){
 			motor_start(buffer);
 		}
@@ -187,7 +182,5 @@ ISR(INT0_vect) {
 
 ISR(INT1_vect) {
 		PORTB &= ~(0x2);
-		uartPut('S');
-		interupt_cnt = true;
-
+		uartPut('C');
 }
